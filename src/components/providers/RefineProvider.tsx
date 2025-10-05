@@ -215,6 +215,7 @@ export function RefineProvider({ children }: PropsWithChildren) {
       options={{
         syncWithLocation: true,
         warnWhenUnsavedChanges: true,
+        disableTelemetry: true,
       }}
     >
       {children}
