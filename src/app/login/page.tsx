@@ -1,7 +1,5 @@
 "use client"
 
-export const dynamic = 'force-dynamic'
-
 import { useState } from "react"
 import { useLogin } from "@refinedev/core"
 import { useForm } from "react-hook-form"

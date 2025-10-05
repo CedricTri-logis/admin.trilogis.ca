@@ -1,6 +1,6 @@
 "use client"
 
-import { PropsWithChildren, useMemo } from "react"
+import { PropsWithChildren, useMemo, Suspense } from "react"
 import { Refine, type AuthBindings, type IResourceItem } from "@refinedev/core"
 import routerProvider from "@refinedev/nextjs-router/app"
 import {
@@ -213,12 +213,14 @@ export function RefineProvider({ children }: PropsWithChildren) {
       authProvider={authProvider}
       resources={resources}
       options={{
-        syncWithLocation: true,
+        syncWithLocation: false,
         warnWhenUnsavedChanges: true,
         disableTelemetry: true,
       }}
     >
-      {children}
+      <Suspense fallback={<div>Loading...</div>}>
+        {children}
+      </Suspense>
     </Refine>
   )
 }
