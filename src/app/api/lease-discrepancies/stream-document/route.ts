@@ -108,25 +108,31 @@ export async function GET(request: NextRequest) {
     });
 
     if (downloadError) {
-      // Access the originalError property
-      const originalError = (downloadError as any).originalError;
+      // Access the originalError property which is a Response object
+      const originalError = (downloadError as any).originalError as Response;
 
-      console.error('[stream-document] Download error full object:', downloadError);
-      console.error('[stream-document] Original error:', originalError);
-      console.error('[stream-document] Original error details:', {
-        message: originalError?.message,
-        statusCode: originalError?.statusCode,
-        error: originalError?.error,
-        status: originalError?.status
-      });
+      console.error('[stream-document] Download error - Status:', originalError?.status);
+      console.error('[stream-document] Download error - URL:', originalError?.url);
+
+      // Read the response body to get the actual error message
+      let errorBody = null;
+      if (originalError && !originalError.bodyUsed) {
+        try {
+          errorBody = await originalError.json();
+          console.error('[stream-document] Supabase error response body:', errorBody);
+        } catch (e) {
+          console.error('[stream-document] Could not parse error body:', e);
+        }
+      }
 
       return NextResponse.json(
         {
           error: 'Failed to download document from storage',
-          details: originalError?.message || downloadError.message || 'Unknown error',
-          originalErrorDetails: originalError,
+          details: errorBody?.error || errorBody?.message || 'Supabase Storage returned 400 Bad Request',
+          supabaseError: errorBody,
           storagePath,
-          statusCode: originalError?.statusCode
+          status: originalError?.status,
+          url: originalError?.url
         },
         { status: 500 }
       );
