@@ -61,7 +61,7 @@ export function EditableStatusCell({
 
       if (error) {
         console.error("Error updating status:", error)
-        alert("Failed to update status")
+        alert("Échec de la mise à jour du statut")
       } else {
         setStatus(newStatus)
         setIsOpen(false)
@@ -73,7 +73,7 @@ export function EditableStatusCell({
       }
     } catch (err) {
       console.error("Unexpected error:", err)
-      alert("Failed to update status")
+      alert("Échec de la mise à jour du statut")
     } finally {
       setIsUpdating(false)
     }
