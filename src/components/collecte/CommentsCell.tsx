@@ -19,6 +19,7 @@ type Comment = {
   created_at: string
   created_by: string
   user_email?: string
+  user_first_name?: string
 }
 
 interface CommentsCellProps {
@@ -40,12 +41,14 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
     try {
       const { data, error } = await supabase
         .schema("integration")
-        .from("collecte_comments")
+        .from("collecte_comments_with_users")
         .select(`
           id,
           comment,
           created_at,
-          created_by
+          created_by,
+          user_email,
+          user_first_name
         `)
         .eq("collecte_id", collecteId)
         .order("created_at", { ascending: false })
@@ -55,8 +58,6 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
         return
       }
 
-      // For now, just display user IDs. In production, you'd fetch user profiles
-      // from a profiles table or use an API route to get user emails
       setComments(data || [])
     } catch (err) {
       console.error("Error:", err)
@@ -160,7 +161,7 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
                 <div key={comment.id} className="border-b pb-3 last:border-b-0">
                   <div className="text-sm">{comment.comment}</div>
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{comment.user_email || (comment.created_by ? `Utilisateur ${comment.created_by.substring(0, 8)}...` : "Inconnu")}</span>
+                    <span>{comment.user_first_name || comment.user_email || "Utilisateur inconnu"}</span>
                     <span>•</span>
                     <span>
                       {formatDistanceToNow(new Date(comment.created_at), {
