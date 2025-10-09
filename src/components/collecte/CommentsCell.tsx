@@ -28,6 +28,7 @@ interface CommentsCellProps {
 
 export function CommentsCell({ collecteId }: CommentsCellProps) {
   const [comments, setComments] = useState<Comment[]>([])
+  const [commentCount, setCommentCount] = useState(0)
   const [newComment, setNewComment] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,6 +36,25 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
   const [error, setError] = useState<string | null>(null)
 
   const supabase = createSupabaseBrowserClient()
+
+  const fetchCommentCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .schema("integration")
+        .from("collecte_comments")
+        .select("*", { count: "exact", head: true })
+        .eq("collecte_id", collecteId)
+
+      if (error) {
+        console.error("Error fetching comment count:", error)
+        return
+      }
+
+      setCommentCount(count || 0)
+    } catch (err) {
+      console.error("Error:", err)
+    }
+  }
 
   const fetchComments = async () => {
     setIsLoading(true)
@@ -59,6 +79,7 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
       }
 
       setComments(data || [])
+      setCommentCount(data?.length || 0)
     } catch (err) {
       console.error("Error:", err)
     } finally {
@@ -66,6 +87,12 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
     }
   }
 
+  // Fetch comment count on mount
+  useEffect(() => {
+    fetchCommentCount()
+  }, [collecteId])
+
+  // Fetch full comments when popover opens
   useEffect(() => {
     if (isOpen) {
       fetchComments()
@@ -115,6 +142,7 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
       setNewComment("")
       setError(null)
       await fetchComments()
+      await fetchCommentCount()
     } catch (err) {
       console.error("Unexpected error:", err)
       setError("Une erreur inattendue s'est produite. Veuillez réessayer.")
@@ -129,12 +157,10 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-8 gap-1 px-2"
         >
           <MessageSquare className="h-4 w-4" />
-          {comments.length > 0 && (
-            <span className="ml-1 text-xs">{comments.length}</span>
-          )}
+          <span className="text-xs">{commentCount}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96" align="end">
@@ -142,7 +168,7 @@ export function CommentsCell({ collecteId }: CommentsCellProps) {
           <div className="flex items-center justify-between">
             <h4 className="font-semibold">Commentaires</h4>
             <span className="text-xs text-muted-foreground">
-              {comments.length} commentaire{comments.length !== 1 ? 's' : ''}
+              {commentCount} commentaire{commentCount !== 1 ? 's' : ''}
             </span>
           </div>
 
