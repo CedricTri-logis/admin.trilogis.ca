@@ -185,22 +185,31 @@ export default function QuickBooksSettingsPage() {
           <div className="space-y-2">
             <h3 className="font-medium">Étape 1: Vérifier l'URL de redirection</h3>
             <p className="text-sm text-muted-foreground">
-              Assurez-vous que l'URL de redirection dans votre fichier .env.local correspond à:
+              L'URL de redirection suivante doit être configurée:
             </p>
             <code className="block bg-muted p-2 rounded text-sm">
-              QUICKBOOKS_REDIRECT_URI=http://localhost:3000/api/quickbooks/auth/callback
+              https://admin.trilogis.ca/api/quickbooks/auth/callback
             </code>
-            <p className="text-sm text-muted-foreground">
-              Cette URL doit également être configurée dans votre application QuickBooks sur{" "}
-              <a
-                href="https://developer.intuit.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                developer.intuit.com
-              </a>
+            <p className="text-sm text-muted-foreground mt-2">
+              Cette URL doit être ajoutée dans:
             </p>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+              <li>
+                Votre application QuickBooks sur{" "}
+                <a
+                  href="https://developer.intuit.com/app/developer/myapps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  developer.intuit.com
+                </a>{" "}
+                (Keys & OAuth → Redirect URIs)
+              </li>
+              <li>
+                Variables d'environnement Vercel (QUICKBOOKS_REDIRECT_URI)
+              </li>
+            </ul>
           </div>
 
           <div className="space-y-2">

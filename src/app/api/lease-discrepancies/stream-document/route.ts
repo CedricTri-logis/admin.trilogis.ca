@@ -64,13 +64,6 @@ export async function GET(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    console.log('[stream-document] Environment check:', {
-      hasUrl: !!supabaseUrl,
-      hasServiceKey: !!serviceRoleKey,
-      serviceKeyLength: serviceRoleKey?.length,
-      serviceKeyPrefix: serviceRoleKey?.substring(0, 20) + '...'
-    });
-
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('[stream-document] Missing environment variables');
       return NextResponse.json(
@@ -79,85 +72,61 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create service role client for direct storage access
-    const supabaseServiceRole = createSupabaseClient(
-      supabaseUrl,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+    // Manually construct URL with proper encoding of each path segment
+    // The Supabase SDK doesn't properly encode special characters like :, &, $, ()
+    const pathSegments = storagePath.split('/');
+    const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
+    const encodedPath = encodedSegments.join('/');
+
+    const storageApiUrl = `${supabaseUrl}/storage/v1/object/documents/${encodedPath}`;
+
+    console.log('[stream-document] Original path:', storagePath);
+    console.log('[stream-document] Encoded path:', encodedPath);
+    console.log('[stream-document] Fetching from:', storageApiUrl);
+
+    // Fetch directly with properly encoded URL
+    const response = await fetch(storageApiUrl, {
+      headers: {
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'apikey': serviceRoleKey
       }
-    );
-
-    console.log('[stream-document] Attempting to download file using Supabase SDK');
-
-    // Use the download method with service role
-    const { data: fileBlob, error: downloadError } = await supabaseServiceRole.storage
-      .from('documents')
-      .download(storagePath);
-
-    console.log('[stream-document] Download attempt result:', {
-      success: !!fileBlob,
-      hasError: !!downloadError,
-      errorMessage: downloadError?.message,
-      errorName: downloadError?.name,
-      blobSize: fileBlob?.size,
-      blobType: fileBlob?.type
     });
 
-    if (downloadError) {
-      // Access the originalError property which is a Response object
-      const originalError = (downloadError as any).originalError as Response;
+    console.log('[stream-document] Fetch result:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length')
+    });
 
-      console.error('[stream-document] Download error - Status:', originalError?.status);
-      console.error('[stream-document] Download error - URL:', originalError?.url);
-
-      // Read the response body to get the actual error message
-      let errorBody = null;
-      if (originalError && !originalError.bodyUsed) {
-        try {
-          errorBody = await originalError.json();
-          console.error('[stream-document] Supabase error response body:', errorBody);
-        } catch (e) {
-          console.error('[stream-document] Could not parse error body:', e);
-        }
-      }
-
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[stream-document] Error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
       return NextResponse.json(
         {
           error: 'Failed to download document from storage',
-          details: errorBody?.error || errorBody?.message || 'Supabase Storage returned 400 Bad Request',
-          supabaseError: errorBody,
-          storagePath,
-          status: originalError?.status,
-          url: originalError?.url
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!fileBlob) {
-      console.error('[stream-document] No file blob returned');
-      return NextResponse.json(
-        {
-          error: 'No file data returned from storage',
+          details: `${response.status} ${response.statusText}`,
+          errorText,
           storagePath
         },
         { status: 500 }
       );
     }
 
-    // Convert blob to array buffer
-    const arrayBuffer = await fileBlob.arrayBuffer();
+    // Get the file as array buffer
+    const arrayBuffer = await response.arrayBuffer();
 
     console.log('[stream-document] Successfully downloaded file, streaming to client');
 
     // Return the file as a stream
     return new NextResponse(arrayBuffer, {
       headers: {
-        'Content-Type': fileBlob.type || 'application/pdf',
+        'Content-Type': response.headers.get('content-type') || 'application/pdf',
         'Content-Length': arrayBuffer.byteLength.toString(),
         'Content-Disposition': `inline; filename="${record.file_name || 'document.pdf'}"`,
         'Cache-Control': 'private, max-age=3600',
