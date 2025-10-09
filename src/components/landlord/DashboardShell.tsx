@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen } from "lucide-react"
+import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen, Building2, DollarSign, BarChart3, FileWarning } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -26,6 +26,7 @@ type DashboardShellProps = PropsWithChildren<{
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: House },
+  { href: "/accounting", label: "Accounting", icon: BarChart3 },
   { href: "/landlord-access", label: "Access", icon: ShieldCheck },
   { href: "/landlord-categories", label: "Categories", icon: ShieldCheck },
 ] as const
@@ -36,17 +37,36 @@ const TAL_SUBITEMS = [
   { href: "/integration/tal-audience", label: "Audience" },
 ] as const
 
+const QUICKBOOKS_SUBITEMS = [
+  { href: "/integration/quickbooks", label: "Reconciliation" },
+  { href: "/integration/quickbooks/invoices", label: "Invoices" },
+] as const
+
 const COLLECTE_SUBITEMS = [
   { href: "/collecte/actuel", label: "Actuel" },
   { href: "/collecte/ancien", label: "Ancien" },
+] as const
+
+const PROPRIETE_SUBITEMS = [
+  { href: "/propriete/immeubles", label: "Immeubles" },
+  { href: "/propriete/apartments", label: "Apartments" },
+  { href: "/propriete/photo", label: "Photo" },
+] as const
+
+const BAUX_SUBITEMS = [
+  { href: "/integration/lease-discrepancies", label: "Discordances" },
 ] as const
 
 export function DashboardShell({ email, categories = [], children }: DashboardShellProps) {
   const { mutate: logout } = useLogout()
   const pathname = usePathname()
   const [isTalExpanded, setIsTalExpanded] = useState(true)
+  const [isQuickBooksExpanded, setIsQuickBooksExpanded] = useState(true)
   const [isCollecteExpanded, setIsCollecteExpanded] = useState(true)
+  const [isProprieteExpanded, setIsProprieteExpanded] = useState(true)
+  const [isBauxExpanded, setIsBauxExpanded] = useState(true)
   const [uncategorizedCount, setUncategorizedCount] = useState<number>(0)
+  const [leaseDiscrepancyCount, setLeaseDiscrepancyCount] = useState<number>(0)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
@@ -61,7 +81,18 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
       setUncategorizedCount(count || 0)
     }
 
+    const fetchLeaseDiscrepancyCount = async () => {
+      const { count } = await supabase
+        .schema("integration")
+        .from("all_lease_discrepancies")
+        .select("*", { count: "exact", head: true })
+        .or("severity.ilike.CRITICAL%,severity.ilike.HIGH%")
+
+      setLeaseDiscrepancyCount(count || 0)
+    }
+
     fetchUncategorizedCount()
+    fetchLeaseDiscrepancyCount()
   }, [supabase])
 
   const initials = useMemo(() => {
@@ -74,8 +105,13 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
 
   const categoryLabel = categories.length > 0 ? categories.join(", ") : "No category assigned"
 
-  const isTalActive = pathname?.startsWith("/integration/")
+  const isTalActive = pathname?.startsWith("/integration/apartments-tal-dossiers") ||
+                       pathname?.startsWith("/integration/tal-recours") ||
+                       pathname?.startsWith("/integration/tal-audience")
+  const isQuickBooksActive = pathname?.startsWith("/integration/quickbooks")
   const isCollecteActive = pathname?.startsWith("/collecte/")
+  const isProprieteActive = pathname?.startsWith("/propriete/")
+  const isBauxActive = pathname?.startsWith("/integration/lease-discrepancies")
 
   const DesktopNav = (
     <nav className="hidden w-64 flex-col border-r bg-card p-4 md:flex">
@@ -146,6 +182,44 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
           )}
         </div>
 
+        {/* QuickBooks Parent Menu */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsQuickBooksExpanded(!isQuickBooksExpanded)}
+            className={cn("w-full justify-start", isQuickBooksActive && "bg-muted")}
+          >
+            {isQuickBooksExpanded ? (
+              <ChevronDown className="mr-2 h-4 w-4" />
+            ) : (
+              <ChevronRight className="mr-2 h-4 w-4" />
+            )}
+            <DollarSign className="mr-2 h-4 w-4" />
+            QuickBooks
+          </Button>
+
+          {isQuickBooksExpanded && (
+            <div className="ml-6 space-y-1">
+              {QUICKBOOKS_SUBITEMS.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    asChild
+                    size="sm"
+                    className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                  >
+                    <Link href={item.href}>
+                      {item.label}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Collecte Parent Menu */}
         <div className="space-y-1">
           <Button
@@ -176,6 +250,88 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
                   >
                     <Link href={item.href}>
                       {item.label}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Propriete Parent Menu */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsProprieteExpanded(!isProprieteExpanded)}
+            className={cn("w-full justify-start", isProprieteActive && "bg-muted")}
+          >
+            {isProprieteExpanded ? (
+              <ChevronDown className="mr-2 h-4 w-4" />
+            ) : (
+              <ChevronRight className="mr-2 h-4 w-4" />
+            )}
+            <Building2 className="mr-2 h-4 w-4" />
+            Propriete
+          </Button>
+
+          {isProprieteExpanded && (
+            <div className="ml-6 space-y-1">
+              {PROPRIETE_SUBITEMS.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    asChild
+                    size="sm"
+                    className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                  >
+                    <Link href={item.href}>
+                      {item.label}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Baux Parent Menu */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsBauxExpanded(!isBauxExpanded)}
+            className={cn("w-full justify-start", isBauxActive && "bg-muted")}
+          >
+            {isBauxExpanded ? (
+              <ChevronDown className="mr-2 h-4 w-4" />
+            ) : (
+              <ChevronRight className="mr-2 h-4 w-4" />
+            )}
+            <FileWarning className="mr-2 h-4 w-4" />
+            Baux
+          </Button>
+
+          {isBauxExpanded && (
+            <div className="ml-6 space-y-1">
+              {BAUX_SUBITEMS.map((item) => {
+                const isActive = pathname === item.href
+                const showCount = item.href === "/integration/lease-discrepancies" && leaseDiscrepancyCount > 0
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    asChild
+                    size="sm"
+                    className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                  >
+                    <Link href={item.href}>
+                      {item.label}
+                      {showCount && (
+                        <span className="ml-1 text-xs text-red-600 font-semibold">
+                          ({leaseDiscrepancyCount})
+                        </span>
+                      )}
                     </Link>
                   </Button>
                 )
@@ -263,6 +419,44 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
             )}
           </div>
 
+          {/* QuickBooks Parent Menu */}
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              onClick={() => setIsQuickBooksExpanded(!isQuickBooksExpanded)}
+              className={cn("w-full justify-start", isQuickBooksActive && "bg-muted")}
+            >
+              {isQuickBooksExpanded ? (
+                <ChevronDown className="mr-2 h-4 w-4" />
+              ) : (
+                <ChevronRight className="mr-2 h-4 w-4" />
+              )}
+              <DollarSign className="mr-2 h-4 w-4" />
+              QuickBooks
+            </Button>
+
+            {isQuickBooksExpanded && (
+              <div className="ml-6 space-y-1">
+                {QUICKBOOKS_SUBITEMS.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Button
+                      key={item.href}
+                      variant="ghost"
+                      asChild
+                      size="sm"
+                      className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                    >
+                      <Link href={item.href}>
+                        {item.label}
+                      </Link>
+                    </Button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Collecte Parent Menu */}
           <div className="space-y-1">
             <Button
@@ -293,6 +487,88 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
                     >
                       <Link href={item.href}>
                         {item.label}
+                      </Link>
+                    </Button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Propriete Parent Menu */}
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              onClick={() => setIsProprieteExpanded(!isProprieteExpanded)}
+              className={cn("w-full justify-start", isProprieteActive && "bg-muted")}
+            >
+              {isProprieteExpanded ? (
+                <ChevronDown className="mr-2 h-4 w-4" />
+              ) : (
+                <ChevronRight className="mr-2 h-4 w-4" />
+              )}
+              <Building2 className="mr-2 h-4 w-4" />
+              Propriete
+            </Button>
+
+            {isProprieteExpanded && (
+              <div className="ml-6 space-y-1">
+                {PROPRIETE_SUBITEMS.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Button
+                      key={item.href}
+                      variant="ghost"
+                      asChild
+                      size="sm"
+                      className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                    >
+                      <Link href={item.href}>
+                        {item.label}
+                      </Link>
+                    </Button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Baux Parent Menu */}
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              onClick={() => setIsBauxExpanded(!isBauxExpanded)}
+              className={cn("w-full justify-start", isBauxActive && "bg-muted")}
+            >
+              {isBauxExpanded ? (
+                <ChevronDown className="mr-2 h-4 w-4" />
+              ) : (
+                <ChevronRight className="mr-2 h-4 w-4" />
+              )}
+              <FileWarning className="mr-2 h-4 w-4" />
+              Baux
+            </Button>
+
+            {isBauxExpanded && (
+              <div className="ml-6 space-y-1">
+                {BAUX_SUBITEMS.map((item) => {
+                  const isActive = pathname === item.href
+                  const showCount = item.href === "/integration/lease-discrepancies" && leaseDiscrepancyCount > 0
+                  return (
+                    <Button
+                      key={item.href}
+                      variant="ghost"
+                      asChild
+                      size="sm"
+                      className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                    >
+                      <Link href={item.href}>
+                        {item.label}
+                        {showCount && (
+                          <span className="ml-1 text-xs text-red-600 font-semibold">
+                            ({leaseDiscrepancyCount})
+                          </span>
+                        )}
                       </Link>
                     </Button>
                   )

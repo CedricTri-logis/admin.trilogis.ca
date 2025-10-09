@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { formatDateOnly } from "@/lib/utils"
 
 interface LandlordCategoryRecord {
   id: string
@@ -91,7 +92,7 @@ export default function LandlordCategoriesList() {
                     </TableCell>
                     <TableCell>
                       {record.revoked_at
-                        ? `Revoked ${new Date(record.revoked_at).toLocaleDateString()}`
+                        ? `Revoked ${formatDateOnly(record.revoked_at)}`
                         : "Active"}
                     </TableCell>
                     <TableCell className="text-right">

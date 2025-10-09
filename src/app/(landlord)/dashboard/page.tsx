@@ -8,6 +8,12 @@ import Link from "next/link";
 
 const QUICK_ACTIONS = [
   {
+    title: "Accounting Dashboard",
+    description: "View revenue analytics and QuickBooks income data.",
+    href: "/accounting",
+    icon: BarChart3,
+  },
+  {
     title: "Manage properties",
     description: "Review units, lease terms, and occupancy details.",
     href: "/landlord-access",
@@ -18,12 +24,6 @@ const QUICK_ACTIONS = [
     description: "Locate tenant contact information and history.",
     href: "/landlord-categories",
     icon: Users,
-  },
-  {
-    title: "Generate reports",
-    description: "Download portfolio performance and arrears reports.",
-    href: "/reports",
-    icon: BarChart3,
   },
 ];
 

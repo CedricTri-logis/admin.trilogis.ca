@@ -30,6 +30,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { CommentsCell } from "@/components/collecte/CommentsCell"
+import { EditableStatusCell } from "@/components/collecte/EditableStatusCell"
+import { EditableDueDateCell } from "@/components/collecte/EditableDueDateCell"
 
 const PAGE_SIZE = 50
 
@@ -42,6 +45,7 @@ type CollecteInfo = {
   qb_customer_id: string | null
   manual_qb_customer_id: string | null
   qb_balance: number | null
+  status: string | null
 }
 
 type QBInvoice = {
@@ -223,7 +227,7 @@ export default function CollecteDetailPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -232,6 +236,25 @@ export default function CollecteDetailPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
+            <div className="flex items-center gap-2">
+              {collecteInfo && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Statut:</span>
+                    <div className="min-w-[150px]">
+                      <EditableStatusCell
+                        collecteId={collecteId}
+                        currentStatus={collecteInfo.status}
+                        onStatusUpdate={(newStatus) => {
+                          setCollecteInfo({ ...collecteInfo, status: newStatus })
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <CommentsCell collecteId={collecteId} />
+                </>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -337,7 +360,25 @@ export default function CollecteDetailPage() {
                         {formatDateOnly(invoice.txn_date)}
                       </TableCell>
                       <TableCell>
-                        {formatDateOnly(invoice.due_date)}
+                        <EditableDueDateCell
+                          invoiceId={invoice.id}
+                          qbId={invoice.qb_id}
+                          currentDueDate={invoice.due_date}
+                          onDueDateUpdate={(newDueDate) => {
+                            // Update local state
+                            const updatedInvoices = invoices.map(inv =>
+                              inv.id === invoice.id ? { ...inv, due_date: newDueDate } : inv
+                            )
+                            setInvoices(updatedInvoices)
+                            // Also update allInvoices
+                            const updatedAllInvoices = allInvoices.map(inv =>
+                              inv.id === invoice.id ? { ...inv, due_date: newDueDate } : inv
+                            )
+                            setAllInvoices(updatedAllInvoices)
+                            // Refresh data to get updated QB balance
+                            fetchData()
+                          }}
+                        />
                       </TableCell>
                       <TableCell className="text-right">
                         ${parseFloat(invoice.total_amt).toFixed(2)}

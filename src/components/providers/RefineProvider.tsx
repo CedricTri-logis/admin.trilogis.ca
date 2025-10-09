@@ -66,6 +66,26 @@ export function RefineProvider({ children }: PropsWithChildren) {
           schema: "integration",
         },
       },
+      {
+        name: "buildings",
+        list: "/propriete/immeubles",
+        create: "/propriete/immeubles/create",
+        edit: "/propriete/immeubles/edit/:id",
+        meta: {
+          label: "Immeubles",
+          schema: "public",
+        },
+      },
+      {
+        name: "apartments",
+        list: "/propriete/apartments",
+        create: "/propriete/apartments/create",
+        edit: "/propriete/apartments/edit/:id",
+        meta: {
+          label: "Apartments",
+          schema: "public",
+        },
+      },
     ],
     []
   )

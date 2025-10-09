@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCcw, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, XCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatDateOnly } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -330,7 +330,7 @@ export default function CollecteAncienPage() {
                       <TableCell className="text-right">
                         {row.qb_balance !== null && row.qb_balance !== undefined ? `${Number(row.qb_balance).toFixed(2)} $` : "—"}
                       </TableCell>
-                      <TableCell>{row.lease_start_date ? new Date(row.lease_start_date).toLocaleDateString('fr-CA') : "—"}</TableCell>
+                      <TableCell>{formatDateOnly(row.lease_start_date)}</TableCell>
                       <TableCell>
                         {row.has_tal_dossier ? (
                           <div className="flex items-center gap-1 text-green-600">

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
+import { formatDateOnly } from "@/lib/utils"
 
 interface LandlordAccessRecord {
   id: string
@@ -87,7 +88,7 @@ export default function LandlordAccessList() {
                     </TableCell>
                     <TableCell>
                       {record.revoked_at
-                        ? `Revoked ${new Date(record.revoked_at).toLocaleDateString()}`
+                        ? `Revoked ${formatDateOnly(record.revoked_at)}`
                         : "Active"}
                     </TableCell>
                     <TableCell className="text-right">

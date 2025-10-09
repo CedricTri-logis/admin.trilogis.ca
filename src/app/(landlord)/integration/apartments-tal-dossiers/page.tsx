@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCcw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatDateOnly } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -677,7 +677,7 @@ export default function ApartmentsTalDossiersPage() {
                         <TableCell className="max-w-xs truncate">{formatParties(row.demandeur)}</TableCell>
                         <TableCell className="max-w-xs truncate">{formatParties(row.defendeur)}</TableCell>
                         <TableCell className="truncate">{formatRecours(row.recours_array as Array<{ recours: string; category: string }> | null)}</TableCell>
-                        <TableCell>{row.first_action_date ? new Date(row.first_action_date).toLocaleDateString('fr-CA') : "—"}</TableCell>
+                        <TableCell>{formatDateOnly(row.first_action_date)}</TableCell>
                         <TableCell>{row.statut ?? "—"}</TableCell>
                         <TableCell className="text-right">{row.qb_balance != null ? `${Number(row.qb_balance).toFixed(2)} $` : "—"}</TableCell>
                       </TableRow>

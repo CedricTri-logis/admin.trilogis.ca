@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCcw } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatDateOnly } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -161,8 +161,7 @@ export default function TalAudiencePage() {
   }
 
   const formatDate = (date: string | null): string => {
-    if (!date) return "—"
-    return new Date(date).toLocaleDateString('fr-CA')
+    return formatDateOnly(date)
   }
 
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1
