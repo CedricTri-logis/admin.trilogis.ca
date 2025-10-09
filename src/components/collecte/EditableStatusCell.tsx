@@ -136,7 +136,7 @@ export function EditableStatusCell({
         {/* Create new status */}
         <div className="space-y-2 p-2" onClick={(e) => e.stopPropagation()}>
           <Input
-            placeholder="New status..."
+            placeholder="Nouveau statut..."
             value={newStatusInput}
             onChange={(e) => setNewStatusInput(e.target.value)}
             onKeyDown={(e) => {
@@ -155,7 +155,7 @@ export function EditableStatusCell({
               disabled={!newStatusInput.trim()}
               className="flex-1 h-7 text-xs"
             >
-              Add
+              Ajouter
             </Button>
             <Button
               size="sm"
@@ -163,7 +163,7 @@ export function EditableStatusCell({
               onClick={() => updateStatus(null)}
               className="flex-1 h-7 text-xs"
             >
-              Clear
+              Effacer
             </Button>
           </div>
         </div>
