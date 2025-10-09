@@ -183,19 +183,13 @@ export default function QuickBooksSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <h3 className="font-medium">Étape 1: Vérifier l'URL de redirection</h3>
+            <h3 className="font-medium">Étape 1: Utiliser les clés de PRODUCTION</h3>
             <p className="text-sm text-muted-foreground">
-              L'URL de redirection suivante doit être configurée:
+              Assurez-vous d'utiliser les <strong>clés de production</strong> (pas de développement):
             </p>
-            <code className="block bg-muted p-2 rounded text-sm">
-              https://admin.trilogis.ca/api/quickbooks/auth/callback
-            </code>
-            <p className="text-sm text-muted-foreground mt-2">
-              Cette URL doit être ajoutée dans:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+            <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2 ml-2">
               <li>
-                Votre application QuickBooks sur{" "}
+                Allez sur{" "}
                 <a
                   href="https://developer.intuit.com/app/developer/myapps"
                   target="_blank"
@@ -203,13 +197,25 @@ export default function QuickBooksSettingsPage() {
                   className="text-primary underline"
                 >
                   developer.intuit.com
-                </a>{" "}
-                (Keys & OAuth → Redirect URIs)
+                </a>
+              </li>
+              <li>Cliquez sur votre app "Bills extraction"</li>
+              <li>
+                Allez dans <strong>Keys & OAuth</strong>
               </li>
               <li>
-                Variables d'environnement Vercel (QUICKBOOKS_REDIRECT_URI)
+                Cliquez sur l'onglet <strong>"Production"</strong> (pas Development)
               </li>
-            </ul>
+              <li>
+                Copiez le <strong>Client ID</strong> et <strong>Client Secret</strong> de production
+              </li>
+              <li>
+                Dans la section <strong>Redirect URIs</strong> (Production tab), ajoutez:
+                <code className="block bg-muted p-2 rounded text-xs mt-1">
+                  https://admin.trilogis.ca/api/quickbooks/auth/callback
+                </code>
+              </li>
+            </ol>
           </div>
 
           <div className="space-y-2">
