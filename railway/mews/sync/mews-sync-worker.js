@@ -54,7 +54,7 @@ class MewsSyncWorker {
    */
   async emit(eventType, data) {
     try {
-      await this.supabase.from('mews_sync_events').insert({
+      await this.supabase.schema('quickbooks').from('mews_sync_events').insert({
         job_id: this.jobId,
         event_type: eventType,
         event_data: data,
@@ -78,6 +78,7 @@ class MewsSyncWorker {
     };
 
     await this.supabase
+      .schema('quickbooks')
       .from('mews_sync_jobs')
       .update(updates)
       .eq('id', this.jobId);
