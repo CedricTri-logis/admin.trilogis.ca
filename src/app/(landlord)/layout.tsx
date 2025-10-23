@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/toaster'
 
 export default async function LandlordLayout({
   children,
@@ -52,8 +53,11 @@ export default async function LandlordLayout({
   }
 
   return (
-    <DashboardShell email={user.email} categories={portalAccess.landlordCategories}>
-      {children}
-    </DashboardShell>
+    <>
+      <DashboardShell email={user.email} categories={portalAccess.landlordCategories}>
+        {children}
+      </DashboardShell>
+      <Toaster />
+    </>
   )
 }

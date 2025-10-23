@@ -78,6 +78,8 @@ export default function CDCSyncPage() {
   const [syncStates, setSyncStates] = useState<Record<string, CompanySyncState>>({})
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [syncHistory, setSyncHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const logsEndRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const supabase = createSupabaseBrowserClient()
@@ -124,8 +126,26 @@ export default function CDCSyncPage() {
     setIsLoadingCompanies(false)
   }
 
+  // Load sync history
+  const loadSyncHistory = async () => {
+    if (!CDC_SYNC_URL) return
+    setLoadingHistory(true)
+    try {
+      const response = await fetch(`${CDC_SYNC_URL}/api/sync/jobs?limit=10`)
+      if (response.ok) {
+        const data = await response.json()
+        setSyncHistory(data.jobs || [])
+      }
+    } catch (error) {
+      console.error('Failed to load sync history:', error)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
   useEffect(() => {
     fetchCompanies()
+    loadSyncHistory()
 
     // Cleanup: close all SSE connections on unmount
     return () => {
@@ -643,6 +663,137 @@ export default function CDCSyncPage() {
             <p className="text-muted-foreground text-center max-w-md">
               Aucune compagnie QuickBooks active trouvée. Veuillez d'abord vous connecter à QuickBooks.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sync History */}
+      {CDC_SYNC_URL && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Historique des synchronisations</CardTitle>
+            <CardDescription>
+              Les 10 dernières importations QuickBooks (manuelles ou automatiques)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : syncHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Aucun historique de synchronisation disponible
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {syncHistory.map((job, index) => {
+                  const createdDate = new Date(job.created_at)
+                  const updatedDate = job.updated_at ? new Date(job.updated_at) : null
+                  const duration = job.duration
+                    ? `${Math.floor(job.duration / 60)}m ${job.duration % 60}s`
+                    : updatedDate
+                    ? `${Math.round((updatedDate.getTime() - createdDate.getTime()) / 1000)}s`
+                    : '-'
+
+                  const statusColor =
+                    job.status === 'completed' ? 'bg-green-50 border-green-200' :
+                    job.status === 'failed' ? 'bg-red-50 border-red-200' :
+                    job.status === 'running' ? 'bg-blue-50 border-blue-200' :
+                    'bg-gray-50 border-gray-200'
+
+                  const statusIcon =
+                    job.status === 'completed' ? <CheckCircle className="h-4 w-4 text-green-600" /> :
+                    job.status === 'failed' ? <XCircle className="h-4 w-4 text-red-600" /> :
+                    job.status === 'running' ? <Loader2 className="h-4 w-4 text-blue-600 animate-spin" /> :
+                    <Activity className="h-4 w-4 text-gray-600" />
+
+                  return (
+                    <div
+                      key={job.id}
+                      className={cn(
+                        'p-4 rounded-lg border transition-colors',
+                        statusColor
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="mt-1">
+                            {statusIcon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">
+                                Synchronisation #{syncHistory.length - index}
+                              </span>
+                              {job.realm_id && (
+                                <span className="text-xs text-muted-foreground">
+                                  • Realm: {job.realm_id}
+                                </span>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {job.status === 'completed' ? 'Terminé' :
+                                 job.status === 'failed' ? 'Échoué' :
+                                 job.status === 'running' ? 'En cours' :
+                                 job.status}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <div>
+                                📅 Début: {createdDate.toLocaleDateString('fr-CA')} à {createdDate.toLocaleTimeString('fr-CA')}
+                              </div>
+                              {job.params && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {job.params.verify && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                                      ✓ Vérification activée
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right space-y-1 flex-shrink-0">
+                          <div className="text-xs text-muted-foreground">
+                            ⏱️ Durée: {duration}
+                          </div>
+                          {job.stats && (
+                            <div className="flex gap-2 text-xs">
+                              {job.stats.created > 0 && (
+                                <span className="text-green-600 font-medium">
+                                  +{job.stats.created}
+                                </span>
+                              )}
+                              {job.stats.updated > 0 && (
+                                <span className="text-blue-600 font-medium">
+                                  ↻{job.stats.updated}
+                                </span>
+                              )}
+                              {job.stats.deleted > 0 && (
+                                <span className="text-orange-600 font-medium">
+                                  -{job.stats.deleted}
+                                </span>
+                              )}
+                              {job.stats.errors > 0 && (
+                                <span className="text-red-600 font-medium">
+                                  ⚠️{job.stats.errors}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {job.error && (
+                            <div className="text-xs text-red-600 max-w-xs truncate" title={job.error}>
+                              ❌ {job.error}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
