@@ -65,9 +65,34 @@ export default function MewsImportPage() {
   const [fromDate, setFromDate] = useState('2024-01-01')
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
   const [truncate, setTruncate] = useState(false)
+  const [syncHistory, setSyncHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const logsEndRef = useRef<HTMLDivElement | null>(null)
 
   const MEWS_SYNC_URL = process.env.NEXT_PUBLIC_MEWS_SYNC_URL
+
+  // Load sync history on mount
+  useEffect(() => {
+    loadSyncHistory()
+  }, [])
+
+  // Load sync history
+  const loadSyncHistory = async () => {
+    if (!MEWS_SYNC_URL) return
+
+    setLoadingHistory(true)
+    try {
+      const response = await fetch(`${MEWS_SYNC_URL}/api/sync/jobs?limit=10`)
+      if (response.ok) {
+        const data = await response.json()
+        setSyncHistory(data.jobs || [])
+      }
+    } catch (error) {
+      console.error('Failed to load sync history:', error)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   // Auto-scroll logs to bottom
   useEffect(() => {
@@ -166,6 +191,8 @@ export default function MewsImportPage() {
               addLog('success', `Importation terminée ! Total : ${total} enregistrements`, '🎉')
             }
             setIsSyncing(false)
+            // Reload history after completion
+            setTimeout(() => loadSyncHistory(), 1000)
             break
 
           case 'error':
@@ -471,6 +498,140 @@ export default function MewsImportPage() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Sync History Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Historique des synchronisations</CardTitle>
+              <CardDescription>
+                Les 10 dernières importations (manuelles ou automatiques)
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadSyncHistory}
+              disabled={loadingHistory}
+            >
+              {loadingHistory ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingHistory ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : syncHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>Aucune synchronisation trouvée</p>
+              <p className="text-sm mt-2">Lancez une importation pour voir l'historique</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {syncHistory.map((job) => {
+                const startDate = job.started_at ? new Date(job.started_at) : new Date(job.created_at)
+                const endDate = job.completed_at ? new Date(job.completed_at) : null
+                const duration = endDate ? Math.round((endDate.getTime() - startDate.getTime()) / 1000) : null
+
+                return (
+                  <div
+                    key={job.id}
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {job.status === 'completed' && (
+                            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          )}
+                          {job.status === 'in_progress' && (
+                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin flex-shrink-0" />
+                          )}
+                          {job.status === 'failed' && (
+                            <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                          )}
+                          {job.status === 'pending' && (
+                            <Activity className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">
+                                {startDate.toLocaleDateString('fr-CA')}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {startDate.toLocaleTimeString('fr-CA')}
+                              </span>
+                              {job.options?.from && job.options?.to && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({job.options.from} → {job.options.to})
+                                </span>
+                              )}
+                            </div>
+
+                            {job.stats && (
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                {job.stats.categories > 0 && (
+                                  <span>{job.stats.categories} catégories</span>
+                                )}
+                                {job.stats.spaces > 0 && (
+                                  <span>{job.stats.spaces} espaces</span>
+                                )}
+                                {job.stats.reservations > 0 && (
+                                  <span>{job.stats.reservations} réservations</span>
+                                )}
+                                {job.stats.accountingItems > 0 && (
+                                  <span>{job.stats.accountingItems} items</span>
+                                )}
+                              </div>
+                            )}
+
+                            {job.error_message && (
+                              <div className="text-sm text-red-600 mt-1">
+                                {job.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 ml-4">
+                        <Badge
+                          variant={
+                            job.status === 'completed' ? 'default' :
+                            job.status === 'failed' ? 'destructive' :
+                            job.status === 'in_progress' ? 'secondary' :
+                            'outline'
+                          }
+                          className="capitalize"
+                        >
+                          {job.status === 'completed' ? 'terminé' :
+                           job.status === 'in_progress' ? 'en cours' :
+                           job.status === 'failed' ? 'échoué' :
+                           'en attente'}
+                        </Badge>
+                        {duration !== null && (
+                          <span className="text-xs text-muted-foreground">
+                            {duration < 60 ? `${duration}s` : `${Math.floor(duration / 60)}m ${duration % 60}s`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
