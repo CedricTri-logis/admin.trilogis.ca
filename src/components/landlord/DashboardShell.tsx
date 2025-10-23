@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen, Building2, DollarSign, BarChart3, FileWarning, Users, Copy } from "lucide-react"
+import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen, Building2, DollarSign, BarChart3, FileWarning, Users, Copy, Hotel } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -43,6 +43,10 @@ const QUICKBOOKS_SUBITEMS = [
   { href: "/integration/quickbooks/import", label: "Import" },
 ] as const
 
+const MEWS_SUBITEMS = [
+  { href: "/integration/mews/import", label: "Import" },
+] as const
+
 const COLLECTE_SUBITEMS = [
   { href: "/collecte/actuel", label: "Actuel" },
   { href: "/collecte/ancien", label: "Ancien" },
@@ -69,6 +73,7 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
   const pathname = usePathname()
   const [isTalExpanded, setIsTalExpanded] = useState(true)
   const [isQuickBooksExpanded, setIsQuickBooksExpanded] = useState(true)
+  const [isMewsExpanded, setIsMewsExpanded] = useState(true)
   const [isCollecteExpanded, setIsCollecteExpanded] = useState(true)
   const [isProprieteExpanded, setIsProprieteExpanded] = useState(true)
   const [isBauxExpanded, setIsBauxExpanded] = useState(true)
@@ -117,6 +122,7 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
                        pathname?.startsWith("/integration/tal-recours") ||
                        pathname?.startsWith("/integration/tal-audience")
   const isQuickBooksActive = pathname?.startsWith("/integration/quickbooks")
+  const isMewsActive = pathname?.startsWith("/integration/mews")
   const isCollecteActive = pathname?.startsWith("/collecte/")
   const isProprieteActive = pathname?.startsWith("/propriete/")
   const isBauxActive = pathname?.startsWith("/integration/lease-discrepancies")
@@ -210,6 +216,44 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
           {isQuickBooksExpanded && (
             <div className="ml-6 space-y-1">
               {QUICKBOOKS_SUBITEMS.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    asChild
+                    size="sm"
+                    className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                  >
+                    <Link href={item.href}>
+                      {item.label}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Mews Parent Menu */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsMewsExpanded(!isMewsExpanded)}
+            className={cn("w-full justify-start", isMewsActive && "bg-muted")}
+          >
+            {isMewsExpanded ? (
+              <ChevronDown className="mr-2 h-4 w-4" />
+            ) : (
+              <ChevronRight className="mr-2 h-4 w-4" />
+            )}
+            <Hotel className="mr-2 h-4 w-4" />
+            Mews
+          </Button>
+
+          {isMewsExpanded && (
+            <div className="ml-6 space-y-1">
+              {MEWS_SUBITEMS.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Button
