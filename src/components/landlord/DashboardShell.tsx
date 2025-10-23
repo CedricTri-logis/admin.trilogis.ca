@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen, Building2, DollarSign, BarChart3, FileWarning } from "lucide-react"
+import { FileText, House, LogOut, Menu, ShieldCheck, ChevronRight, ChevronDown, FolderOpen, Building2, DollarSign, BarChart3, FileWarning, Users, Copy } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -40,11 +40,13 @@ const TAL_SUBITEMS = [
 const QUICKBOOKS_SUBITEMS = [
   { href: "/integration/quickbooks", label: "Reconciliation" },
   { href: "/integration/quickbooks/invoices", label: "Invoices" },
+  { href: "/integration/quickbooks/import", label: "Import" },
 ] as const
 
 const COLLECTE_SUBITEMS = [
   { href: "/collecte/actuel", label: "Actuel" },
   { href: "/collecte/ancien", label: "Ancien" },
+  { href: "/collecte/progression", label: "Progression" },
 ] as const
 
 const PROPRIETE_SUBITEMS = [
@@ -57,6 +59,11 @@ const BAUX_SUBITEMS = [
   { href: "/integration/lease-discrepancies", label: "Discordances" },
 ] as const
 
+const CONTACTS_SUBITEMS = [
+  { href: "/contacts", label: "All Contacts" },
+  { href: "/contacts/duplicates", label: "Duplicates" },
+] as const
+
 export function DashboardShell({ email, categories = [], children }: DashboardShellProps) {
   const { mutate: logout } = useLogout()
   const pathname = usePathname()
@@ -65,6 +72,7 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
   const [isCollecteExpanded, setIsCollecteExpanded] = useState(true)
   const [isProprieteExpanded, setIsProprieteExpanded] = useState(true)
   const [isBauxExpanded, setIsBauxExpanded] = useState(true)
+  const [isContactsExpanded, setIsContactsExpanded] = useState(true)
   const [uncategorizedCount, setUncategorizedCount] = useState<number>(0)
   const [leaseDiscrepancyCount, setLeaseDiscrepancyCount] = useState<number>(0)
 
@@ -112,6 +120,7 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
   const isCollecteActive = pathname?.startsWith("/collecte/")
   const isProprieteActive = pathname?.startsWith("/propriete/")
   const isBauxActive = pathname?.startsWith("/integration/lease-discrepancies")
+  const isContactsActive = pathname?.startsWith("/contacts/")
 
   const DesktopNav = (
     <nav className="hidden w-64 flex-col border-r bg-card p-4 md:flex">
@@ -332,6 +341,45 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
                           ({leaseDiscrepancyCount})
                         </span>
                       )}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Contacts Parent Menu */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsContactsExpanded(!isContactsExpanded)}
+            className={cn("w-full justify-start", isContactsActive && "bg-muted")}
+          >
+            {isContactsExpanded ? (
+              <ChevronDown className="mr-2 h-4 w-4" />
+            ) : (
+              <ChevronRight className="mr-2 h-4 w-4" />
+            )}
+            <Users className="mr-2 h-4 w-4" />
+            Contacts
+          </Button>
+
+          {isContactsExpanded && (
+            <div className="ml-6 space-y-1">
+              {CONTACTS_SUBITEMS.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    asChild
+                    size="sm"
+                    className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                  >
+                    <Link href={item.href}>
+                      <Copy className="mr-2 h-3 w-3" />
+                      {item.label}
                     </Link>
                   </Button>
                 )
@@ -569,6 +617,45 @@ export function DashboardShell({ email, categories = [], children }: DashboardSh
                             ({leaseDiscrepancyCount})
                           </span>
                         )}
+                      </Link>
+                    </Button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Contacts Parent Menu */}
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              onClick={() => setIsContactsExpanded(!isContactsExpanded)}
+              className={cn("w-full justify-start", isContactsActive && "bg-muted")}
+            >
+              {isContactsExpanded ? (
+                <ChevronDown className="mr-2 h-4 w-4" />
+              ) : (
+                <ChevronRight className="mr-2 h-4 w-4" />
+              )}
+              <Users className="mr-2 h-4 w-4" />
+              Contacts
+            </Button>
+
+            {isContactsExpanded && (
+              <div className="ml-6 space-y-1">
+                {CONTACTS_SUBITEMS.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Button
+                      key={item.href}
+                      variant="ghost"
+                      asChild
+                      size="sm"
+                      className={cn("w-full justify-start text-sm", isActive && "bg-muted")}
+                    >
+                      <Link href={item.href}>
+                        <Copy className="mr-2 h-3 w-3" />
+                        {item.label}
                       </Link>
                     </Button>
                   )
