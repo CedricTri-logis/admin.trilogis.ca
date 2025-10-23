@@ -93,18 +93,21 @@ async function makeQBRequest(method, url, token, supabase, data = null, retries 
 
       return response.data;
     } catch (error) {
-      // If 401 Unauthorized, refresh token and retry
-      if (error.response?.status === 401 && attempt < retries - 1) {
-        console.log(`⚠️  401 error, refreshing token (attempt ${attempt + 1}/${retries})`);
+      // If 401 Unauthorized or 403 Forbidden, refresh token and retry
+      if ((error.response?.status === 401 || error.response?.status === 403) && attempt < retries - 1) {
+        console.log(`⚠️  ${error.response?.status} error, refreshing token (attempt ${attempt + 1}/${retries})`);
 
         const refreshedToken = await refreshToken(token, supabase);
         if (!refreshedToken) {
-          throw new Error('Failed to refresh token after 401 error');
+          throw new Error(`Failed to refresh token after ${error.response?.status} error`);
         }
 
         // Update token reference for next retry
         token.access_token = refreshedToken.access_token;
         token.refresh_token = refreshedToken.refresh_token;
+
+        // Wait a bit before retrying to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
 
