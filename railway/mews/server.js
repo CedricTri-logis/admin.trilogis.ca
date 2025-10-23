@@ -65,7 +65,6 @@ app.post('/api/sync/start', async (req, res) => {
 
     // Create sync job
     const { data: job, error } = await supabase
-      .schema('quickbooks')
       .from('mews_sync_jobs')
       .insert({
         status: 'pending',
@@ -127,7 +126,7 @@ app.get('/api/sync/stream/:jobId', async (req, res) => {
     try {
       // Check if job is complete first
       const { data: job } = await supabase
-        .schema('quickbooks')
+        
         .from('mews_sync_jobs')
         .select('status, stats, error_message')
         .eq('id', jobId)
@@ -135,7 +134,7 @@ app.get('/api/sync/stream/:jobId', async (req, res) => {
 
       // Query for new events
       let query = supabase
-        .schema('quickbooks')
+        
         .from('mews_sync_events')
         .select('*')
         .eq('job_id', jobId)
@@ -164,7 +163,7 @@ app.get('/api/sync/stream/:jobId', async (req, res) => {
 
         // Delete event after sending (cleanup)
         await supabase
-          .schema('quickbooks')
+          
           .from('mews_sync_events')
           .delete()
           .eq('id', event.id);
@@ -177,7 +176,7 @@ app.get('/api/sync/stream/:jobId', async (req, res) => {
 
         // Do one final check for any remaining events
         const { data: finalEvents } = await supabase
-          .schema('quickbooks')
+          
           .from('mews_sync_events')
           .select('*')
           .eq('job_id', jobId)
@@ -193,7 +192,7 @@ app.get('/api/sync/stream/:jobId', async (req, res) => {
 
           // Delete event after sending
           await supabase
-            .schema('quickbooks')
+            
             .from('mews_sync_events')
             .delete()
             .eq('id', event.id);
@@ -239,7 +238,7 @@ app.get('/api/sync/status/:jobId', async (req, res) => {
     const { jobId } = req.params;
 
     const { data: job, error } = await supabase
-      .schema('quickbooks')
+      
       .from('mews_sync_jobs')
       .select('*')
       .eq('id', jobId)
@@ -262,7 +261,7 @@ app.get('/api/sync/jobs', async (req, res) => {
     const { limit = 10 } = req.query;
 
     const { data: jobs, error } = await supabase
-      .schema('quickbooks')
+      
       .from('mews_sync_jobs')
       .select('*')
       .order('created_at', { ascending: false })
