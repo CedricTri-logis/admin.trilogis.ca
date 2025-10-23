@@ -1,157 +1,131 @@
-# Railway Workers - Simple Setup
+# Railway Workers - Separated Services
 
-This folder contains a simple web server that runs your background jobs on Railway.
+This directory contains separate Railway worker services for different import operations. Each service is independent and can be deployed separately.
 
-## How It Works
-
-1. **Server runs 24/7** - Railway keeps this server running
-2. **External cron triggers it** - cron-job.org sends requests on schedule
-3. **Server runs your scripts** - Executes your existing scripts as-is
-4. **No time limits** - Scripts can run for hours
-
-## Architecture
+## Structure
 
 ```
-cron-job.org (Free scheduler)
-    ↓
-    Sends HTTP request at 2 AM daily
-    ↓
-Railway Server (This server.js)
-    ↓
-    Runs: node scripts/quickbooks/Import/sync-cdc-incremental.js
-    ↓
-    Takes 30-60 minutes (no problem!)
-    ↓
-    Returns "done"
+railway/
+├── quickbooks/          # QuickBooks CDC Sync Worker
+│   ├── server.js        # Express server with QB endpoints
+│   ├── package.json     # QB-specific dependencies
+│   ├── README.md        # QB deployment guide
+│   └── sync/
+│       ├── cdc-sync-worker.js
+│       ├── qb-auth.js
+│       └── entity-preparers.js
+│
+└── mews/                # Mews Import Worker
+    ├── server.js        # Express server with Mews endpoints
+    ├── package.json     # Mews-specific dependencies
+    ├── README.md        # Mews deployment guide
+    └── sync/
+        └── mews-sync-worker.js
 ```
 
-## Files in This Folder
+## Why Separate Services?
 
-- `server.js` - Web server that triggers your scripts
-- `package.json` - Dependencies needed
+### Benefits:
+1. **Independent Scaling** - Each service scales based on its own load
+2. **Failure Isolation** - If one crashes, the other continues working
+3. **Separate Logs** - Easier debugging and monitoring
+4. **Independent Deployments** - Update one without affecting the other
+5. **Resource Optimization** - Railway can allocate resources independently
+6. **Clean Separation** - Each service has its own dependencies
 
-## Testing Locally
+## Deployment
 
-1. Go to railway folder:
+### QuickBooks CDC Sync Worker
+
 ```bash
-cd /Users/cedriclajoie/Project/cs50/admin.trilogis.ca/railway
+cd railway/quickbooks
+railway login
+railway init
+railway up
+railway domain
 ```
 
-2. Install dependencies:
+Set environment variables:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `QUICKBOOKS_CLIENT_ID`
+- `QUICKBOOKS_CLIENT_SECRET`
+- `QUICKBOOKS_ENVIRONMENT`
+- `ALLOWED_ORIGINS`
+
+Frontend env: `NEXT_PUBLIC_QUICKBOOKS_SYNC_URL`
+
+### Mews Import Worker
+
 ```bash
+cd railway/mews
+railway login
+railway init
+railway up
+railway domain
+```
+
+Set environment variables:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `MEWS_CLIENT_TOKEN`
+- `MEWS_ACCESS_TOKEN`
+- `MEWS_API_URL`
+- `MEWS_SERVICE_ID`
+- `ALLOWED_ORIGINS`
+
+Frontend env: `NEXT_PUBLIC_MEWS_SYNC_URL`
+
+## Local Development
+
+### QuickBooks Worker
+```bash
+cd railway/quickbooks
 npm install
+npm run dev  # Runs on port 3001
 ```
 
-3. Start the server:
+### Mews Worker
 ```bash
-npm start
+cd railway/mews
+npm install
+npm run dev  # Runs on port 3002
 ```
 
-4. Test health check (open new terminal):
-```bash
-curl http://localhost:3000/health
-```
+## API Endpoints
 
-Should return:
-```json
-{"status":"healthy","timestamp":"...","uptime":123}
-```
+Both services share the same endpoint structure for consistency:
 
-5. Test triggering QB sync (OPTIONAL - will actually run your script!):
-```bash
-curl -X POST http://localhost:3000/sync/quickbooks \
-  -H "Authorization: Bearer change-me-in-production"
-```
+- `GET /health` - Health check
+- `POST /api/sync/start` - Start sync/import
+- `GET /api/sync/stream/:jobId` - SSE progress stream
+- `GET /api/sync/status/:jobId` - Get job status
+- `GET /api/sync/jobs` - List recent jobs
 
-## Deployment to Railway
+## Frontend Integration
 
-### 1. Sign Up for Railway
-- Go to https://railway.app
-- Sign up with GitHub
+The frontend uses separate environment variables:
 
-### 2. Create New Project
-- Click "New Project"
-- Select "Deploy from GitHub repo"
-- Choose your `admin.trilogis.ca` repository
+**QuickBooks Import Page** (`/integration/quickbooks/import`):
+- Uses `NEXT_PUBLIC_QUICKBOOKS_SYNC_URL`
 
-### 3. Configure Root Directory
-- Click your service
-- Go to "Settings"
-- Set "Root Directory" to: `railway`
+**Mews Import Page** (`/integration/mews/import`):
+- Uses `NEXT_PUBLIC_MEWS_SYNC_URL`
 
-### 4. Add Environment Variables
-Click "Variables" tab and add ALL these:
+## Migration from Combined Service
 
-```
-NEXT_PUBLIC_SUPABASE_URL=your_url
-SUPABASE_SERVICE_ROLE_KEY=your_key
-QUICKBOOKS_CLIENT_ID=your_id
-QUICKBOOKS_CLIENT_SECRET=your_secret
-QUICKBOOKS_ENVIRONMENT=production
-MEWS_CLIENT_TOKEN=your_token
-MEWS_ACCESS_TOKEN=your_token
-MEWS_API_URL=https://api.mews.com
-MEWS_SERVICE_ID=your_id
+If migrating from a combined service:
 
-# Create a strong random secret (use https://www.uuidgenerator.net/)
-CRON_SECRET=your-very-secret-random-string-here
-```
-
-### 5. Deploy
-- Railway automatically deploys
-- Wait ~2 minutes
-- You'll get a URL: `your-app.railway.app`
-
-### 6. Set Up Cron Jobs
-
-Go to https://cron-job.org (free):
-
-**Job 1: QuickBooks Sync**
-- Title: "QuickBooks CDC Sync"
-- URL: `https://your-app.railway.app/sync/quickbooks`
-- Schedule: `0 2 * * *` (Daily at 2 AM)
-- Request method: POST
-- Headers → Add:
-  - Key: `Authorization`
-  - Value: `Bearer your-cron-secret` (use same as Railway CRON_SECRET)
-
-**Job 2: MEWS Sync**
-- Title: "MEWS Import"
-- URL: `https://your-app.railway.app/sync/mews`
-- Schedule: `0 3 * * *` (Daily at 3 AM)
-- Request method: POST
-- Headers → Add:
-  - Key: `Authorization`
-  - Value: `Bearer your-cron-secret`
+1. Deploy QuickBooks worker
+2. Deploy Mews worker
+3. Update Vercel environment variables
+4. Test both services
+5. Remove old combined service
 
 ## Monitoring
 
-### View Railway Logs
-1. Go to Railway dashboard
-2. Click your service
-3. Click "Deployments"
-4. View live logs
-
-### Manual Test
-```bash
-# Test health
-curl https://your-app.railway.app/health
-
-# Trigger QB sync manually
-curl -X POST https://your-app.railway.app/sync/quickbooks \
-  -H "Authorization: Bearer your-cron-secret"
-```
-
-## Cost
-
-- **Railway**: $5/month
-- **cron-job.org**: FREE
-- **Total**: $5/month
-
-## Your Scripts Run Exactly As-Is
-
-No changes needed to:
-- `scripts/quickbooks/Import/sync-cdc-incremental.js`
-- `scripts/mews/import-mews2-data.js`
-
-They run with no time limits!
+Each service can be monitored independently in Railway:
+- View logs separately
+- Monitor resource usage per service
+- Set up alerts per service
+- Scale independently based on load

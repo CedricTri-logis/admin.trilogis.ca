@@ -67,7 +67,7 @@ export default function MewsImportPage() {
   const [truncate, setTruncate] = useState(false)
   const logsEndRef = useRef<HTMLDivElement | null>(null)
 
-  const MEWS_SYNC_URL = process.env.NEXT_PUBLIC_CDC_SYNC_URL // Reuse same Railway endpoint
+  const MEWS_SYNC_URL = process.env.NEXT_PUBLIC_MEWS_SYNC_URL
 
   // Auto-scroll logs to bottom
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function MewsImportPage() {
   // Start Mews sync
   const startMewsSync = async () => {
     if (!MEWS_SYNC_URL) {
-      alert('URL de synchronisation non configurée. Définissez la variable d\'environnement NEXT_PUBLIC_CDC_SYNC_URL.')
+      alert('URL de synchronisation Mews non configurée. Définissez la variable d\'environnement NEXT_PUBLIC_MEWS_SYNC_URL.')
       return
     }
 
@@ -117,7 +117,7 @@ export default function MewsImportPage() {
 
     try {
       // Start sync job
-      const response = await fetch(`${MEWS_SYNC_URL}/api/mews/sync/start`, {
+      const response = await fetch(`${MEWS_SYNC_URL}/api/sync/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +136,7 @@ export default function MewsImportPage() {
       addLog('success', `ID de tâche : ${jobId}`, '✅')
 
       // Open SSE connection
-      const es = new EventSource(`${MEWS_SYNC_URL}/api/mews/sync/stream/${jobId}`)
+      const es = new EventSource(`${MEWS_SYNC_URL}/api/sync/stream/${jobId}`)
       updateSyncState({ eventSource: es })
 
       es.onmessage = (event) => {
@@ -264,8 +264,8 @@ export default function MewsImportPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Configuration requise</AlertTitle>
           <AlertDescription>
-            La variable d'environnement NEXT_PUBLIC_CDC_SYNC_URL n'est pas configurée.
-            Veuillez la configurer pour pointer vers votre worker Railway.
+            La variable d'environnement NEXT_PUBLIC_MEWS_SYNC_URL n'est pas configurée.
+            Veuillez la configurer pour pointer vers votre worker Railway Mews.
           </AlertDescription>
         </Alert>
       )}

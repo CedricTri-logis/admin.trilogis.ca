@@ -81,7 +81,7 @@ export default function CDCSyncPage() {
   const logsEndRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const supabase = createSupabaseBrowserClient()
-  const CDC_SYNC_URL = process.env.NEXT_PUBLIC_CDC_SYNC_URL
+  const CDC_SYNC_URL = process.env.NEXT_PUBLIC_QUICKBOOKS_SYNC_URL
 
   // Auto-scroll logs to bottom for each company
   useEffect(() => {
@@ -273,7 +273,7 @@ export default function CDCSyncPage() {
   // Start sync for all companies
   const startAllSyncs = async () => {
     if (!CDC_SYNC_URL) {
-      alert('URL de synchronisation CDC non configurée. Définissez la variable d\'environnement NEXT_PUBLIC_CDC_SYNC_URL.')
+      alert('URL de synchronisation QuickBooks non configurée. Définissez la variable d\'environnement NEXT_PUBLIC_QUICKBOOKS_SYNC_URL.')
       return
     }
 
@@ -403,8 +403,8 @@ export default function CDCSyncPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Configuration requise</AlertTitle>
           <AlertDescription>
-            La variable d'environnement NEXT_PUBLIC_CDC_SYNC_URL n'est pas configurée.
-            Veuillez la configurer pour pointer vers votre worker Railway CDC.
+            La variable d'environnement NEXT_PUBLIC_QUICKBOOKS_SYNC_URL n'est pas configurée.
+            Veuillez la configurer pour pointer vers votre worker Railway QuickBooks.
           </AlertDescription>
         </Alert>
       )}
