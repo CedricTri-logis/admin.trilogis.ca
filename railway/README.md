@@ -2,25 +2,39 @@
 
 This directory contains separate Railway worker services for different import operations. Each service is independent and can be deployed separately.
 
+## ⚠️ Important: Clean Architecture
+
+**ONLY these two services should be deployed to Railway:**
+1. `railway/quickbooks/` - QuickBooks cron service
+2. `railway/mews/` - Mews import worker
+
+**DO NOT** deploy from the `railway/` root directory. Each service has its own isolated code in its subdirectory.
+
 ## Structure
 
 ```
 railway/
-├── quickbooks/          # QuickBooks CDC Sync Worker
-│   ├── server.js        # Express server with QB endpoints
+├── quickbooks/          # ✅ QuickBooks Cron Service (Service 1)
+│   ├── cron.js          # Daily sync trigger
+│   ├── server.js        # [Deprecated - not used by cron]
 │   ├── package.json     # QB-specific dependencies
-│   ├── README.md        # QB deployment guide
+│   ├── railway.toml     # Railway config: runs cron.js
 │   └── sync/
 │       ├── cdc-sync-worker.js
 │       ├── qb-auth.js
 │       └── entity-preparers.js
 │
-└── mews/                # Mews Import Worker
-    ├── server.js        # Express server with Mews endpoints
-    ├── package.json     # Mews-specific dependencies
-    ├── README.md        # Mews deployment guide
-    └── sync/
-        └── mews-sync-worker.js
+├── mews/                # ✅ Mews Import Worker (Service 2)
+│   ├── server.js        # Express server with Mews endpoints
+│   ├── package.json     # Mews-specific dependencies
+│   ├── railway.toml     # Railway config: runs server.js
+│   └── sync/
+│       └── mews-sync-worker.js
+│
+└── [Shared files]
+    ├── package.json     # Shared dependency definitions
+    ├── README.md        # This file
+    └── *.md             # Documentation files
 ```
 
 ## Why Separate Services?
@@ -112,15 +126,23 @@ The frontend uses separate environment variables:
 **Mews Import Page** (`/integration/mews/import`):
 - Uses `NEXT_PUBLIC_MEWS_SYNC_URL`
 
-## Migration from Combined Service
+## Railway Services to Keep
 
-If migrating from a combined service:
+Your Railway dashboard should have **exactly TWO services**:
 
-1. Deploy QuickBooks worker
-2. Deploy Mews worker
-3. Update Vercel environment variables
-4. Test both services
-5. Remove old combined service
+1. **quickbooks-daily-cron** (or similar name)
+   - Root Directory: `railway/quickbooks`
+   - Start Command: `node cron.js`
+   - Purpose: Runs daily QuickBooks sync
+
+2. **mews-import-worker** (or similar name)
+   - Root Directory: `railway/mews`
+   - Start Command: `node server.js`
+   - Purpose: Handles Mews import requests
+
+## ⚠️ Delete Old Service
+
+If you see a third service with a random name (e.g., "tranquil-learning") that runs from the root `railway/` directory, **DELETE IT** - it's the deprecated combined service that is no longer needed.
 
 ## Monitoring
 
