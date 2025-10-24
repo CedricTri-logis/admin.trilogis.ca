@@ -28,6 +28,8 @@ async function getAuthToken(realmId, supabase) {
  */
 async function refreshToken(token, supabase) {
   try {
+    console.log(`🔄 Attempting to refresh token for realm ${token.realm_id}...`);
+
     const response = await axios.post(
       'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
       new URLSearchParams({
@@ -48,7 +50,7 @@ async function refreshToken(token, supabase) {
     const newTokenData = response.data;
 
     // Update token in database
-    await supabase
+    const { error: dbError } = await supabase
       .from('qb_auth_tokens')
       .update({
         access_token: newTokenData.access_token,
@@ -60,7 +62,12 @@ async function refreshToken(token, supabase) {
       })
       .eq('id', token.id);
 
-    console.log('✅ Token refreshed successfully');
+    if (dbError) {
+      console.error('❌ Failed to update token in database:', dbError);
+      throw new Error(`Database update failed: ${dbError.message}`);
+    }
+
+    console.log('✅ Token refreshed successfully for realm', token.realm_id);
 
     return {
       ...token,
@@ -68,7 +75,21 @@ async function refreshToken(token, supabase) {
       refresh_token: newTokenData.refresh_token
     };
   } catch (error) {
-    console.error('❌ Token refresh failed:', error.message);
+    // Log detailed error information
+    console.error('❌ Token refresh failed:', {
+      realm_id: token.realm_id,
+      error_message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      error_data: error.response?.data
+    });
+
+    // Check if the refresh token itself is expired or invalid
+    if (error.response?.status === 400) {
+      const errorDesc = error.response?.data?.error_description || error.response?.data?.error;
+      throw new Error(`Refresh token is invalid or expired: ${errorDesc}. Please reconnect QuickBooks.`);
+    }
+
     throw new Error(`Failed to refresh token: ${error.message}`);
   }
 }
@@ -93,28 +114,46 @@ async function makeQBRequest(method, url, token, supabase, data = null, retries 
 
       return response.data;
     } catch (error) {
+      // Log detailed error information for diagnosis
+      console.error(`❌ Request error (attempt ${attempt + 1}/${retries}):`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        qbError: error.response?.data?.Fault?.Error?.[0],
+        message: error.message,
+        url: error.config?.url
+      });
+
       // If 401 Unauthorized or 403 Forbidden, refresh token and retry
       if ((error.response?.status === 401 || error.response?.status === 403) && attempt < retries - 1) {
-        console.log(`⚠️  ${error.response?.status} error, refreshing token (attempt ${attempt + 1}/${retries})`);
+        console.log(`⚠️  ${error.response?.status} error, attempting token refresh (attempt ${attempt + 1}/${retries})`);
 
-        const refreshedToken = await refreshToken(token, supabase);
-        if (!refreshedToken) {
-          throw new Error(`Failed to refresh token after ${error.response?.status} error`);
+        try {
+          const refreshedToken = await refreshToken(token, supabase);
+          if (!refreshedToken) {
+            throw new Error(`Failed to refresh token after ${error.response?.status} error`);
+          }
+
+          // Update token reference for next retry
+          token.access_token = refreshedToken.access_token;
+          token.refresh_token = refreshedToken.refresh_token;
+
+          console.log(`✅ Token refreshed, retrying request...`);
+
+          // Wait a bit before retrying to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        } catch (refreshError) {
+          console.error(`❌ Token refresh failed:`, refreshError);
+          throw new Error(`Token refresh failed: ${refreshError.message}. You may need to reconnect QuickBooks.`);
         }
-
-        // Update token reference for next retry
-        token.access_token = refreshedToken.access_token;
-        token.refresh_token = refreshedToken.refresh_token;
-
-        // Wait a bit before retrying to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
       }
 
       // For other errors or final retry, throw
       if (attempt === retries - 1) {
-        const errorMsg = error.response?.data?.Fault?.Error?.[0]?.Message || error.message;
-        throw new Error(`QuickBooks API request failed: ${errorMsg}`);
+        const qbError = error.response?.data?.Fault?.Error?.[0];
+        const errorMsg = qbError?.Message || error.response?.statusText || error.message;
+        const errorDetail = qbError?.Detail ? ` (${qbError.Detail})` : '';
+        throw new Error(`QuickBooks API request failed: ${errorMsg}${errorDetail}`);
       }
 
       // Exponential backoff for retries
